@@ -1,0 +1,138 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jenkins-config
+  namespace: jenkins
+  labels:
+    app: jenkins
+    component: controller
+data:
+  # Jenkins Configuration as Code (JCasC)
+  jenkins.yaml: |
+    jenkins:
+      systemMessage: "Jenkins on Kubernetes - Production Ready & Secure"
+
+      # Disable executors on controller - all builds run on agents
+      numExecutors: 0
+      mode: EXCLUSIVE
+
+      # Security Realm - Local authentication
+      securityRealm:
+        local:
+          allowsSignup: false
+          users:
+            - id: "admin"
+              password: "${JENKINS_ADMIN_PASSWORD}"
+
+      # Authorization Strategy
+      authorizationStrategy:
+        loggedInUsersCanDoAnything:
+          allowAnonymousRead: false
+
+      # Agent protocols - only secure JNLP4
+      slaveAgentPort: 50000
+      agentProtocols:
+        - "JNLP4-connect"
+
+      # Kubernetes Cloud Configuration
+      clouds:
+        - kubernetes:
+            name: "kubernetes"
+            serverUrl: "https://kubernetes.default.svc"
+            skipTlsVerify: false
+            namespace: "jenkins"
+            jenkinsUrl: "http://jenkins.jenkins.svc.cluster.local:8080"
+            jenkinsTunnel: "jenkins-agent.jenkins.svc.cluster.local:50000"
+            containerCapStr: "50"
+            maxRequestsPerHostStr: "32"
+            retentionTimeout: 5
+            connectTimeout: 10
+            readTimeout: 20
+            podRetention: onFailure
+
+            # Pod labels for network policy matching
+            podLabels:
+              - key: "jenkins/label"
+                value: "agent"
+
+            # Default pod template
+            templates:
+              - name: "default"
+                label: "jenkins-agent"
+                nodeUsageMode: NORMAL
+                containers:
+                  - name: "jnlp"
+                    image: "jenkins/inbound-agent:latest-jdk17"
+                    workingDir: "/home/jenkins/agent"
+                    command: ""
+                    args: ""
+                    resourceRequestCpu: "200m"
+                    resourceRequestMemory: "256Mi"
+                    resourceLimitCpu: "1000m"
+                    resourceLimitMemory: "1Gi"
+                yamlMergeStrategy: override
+                yaml: |
+                  spec:
+                    securityContext:
+                      runAsUser: 1000
+                      runAsGroup: 1000
+                      fsGroup: 1000
+                    containers:
+                      - name: jnlp
+                        securityContext:
+                          allowPrivilegeEscalation: false
+                          capabilities:
+                            drop:
+                              - ALL
+
+    # Security Configuration
+    security:
+      globalJobDslSecurityConfiguration:
+        useScriptSecurity: true
+      sSHD:
+        port: -1
+      apiToken:
+        creationOfLegacyTokenEnabled: false
+        tokenGenerationOnCreationEnabled: false
+        usageStatisticsEnabled: true
+      queueItemAuthenticator:
+        authenticators:
+          - global:
+              strategy: triggeringUsersAuthorizationStrategy
+
+    # Unclassified configuration
+    unclassified:
+      location:
+        url: "https://jenkins.example.com/"
+        adminAddress: "admin@example.com"
+
+      # Git configuration
+      gitSCM:
+        globalConfigName: "jenkins"
+        globalConfigEmail: "jenkins@example.com"
+
+      # Build discarder defaults
+      buildDiscarders:
+        configuredBuildDiscarders:
+          - "jobBuildDiscarder"
+
+    # Tool configuration
+    tool:
+      git:
+        installations:
+          - name: "Default"
+            home: "git"
+
+      jdk:
+        installations:
+          - name: "JDK17"
+            home: "/opt/java/openjdk"
+
+      maven:
+        installations:
+          - name: "Maven3"
+            properties:
+              - installSource:
+                  installers:
+                    - maven:
+                        id: "3.9.6"

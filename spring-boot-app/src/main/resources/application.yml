@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: demo-app
+
+server:
+  port: 8080
+  shutdown: graceful
+
+# Actuator configuration for health checks and metrics
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+  health:
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true
+
+# Application info
+info:
+  app:
+    name: ${spring.application.name}
+    version: '@project.version@'
+    description: Demo Spring Boot Application for Jenkins K8s Pipeline
+    java:
+      version: '@java.version@'
+
+# Logging configuration
+logging:
+  level:
+    root: INFO
+    com.example.demo: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"

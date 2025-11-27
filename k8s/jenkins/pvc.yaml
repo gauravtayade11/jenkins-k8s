@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jenkins-pvc
+  namespace: jenkins
+  labels:
+    app: jenkins
+    component: controller
+  annotations:
+    description: "Persistent storage for Jenkins home directory"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+  # Uncomment and specify your storage class if not using default
+  # storageClassName: standard
+  # storageClassName: gp2          # AWS EKS
+  # storageClassName: standard-rwo # GKE
+  # storageClassName: managed      # AKS

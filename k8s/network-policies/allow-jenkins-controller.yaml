@@ -1,0 +1,96 @@
+# ============================================
+# Network Policy for Jenkins Controller
+# ============================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-jenkins-controller
+  namespace: jenkins
+  labels:
+    app: jenkins
+    component: controller
+  annotations:
+    description: "Allow necessary traffic to/from Jenkins controller"
+spec:
+  podSelector:
+    matchLabels:
+      app: jenkins
+      component: controller
+  policyTypes:
+    - Ingress
+    - Egress
+
+  ingress:
+    # Allow HTTP traffic from ingress controller (web UI)
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8080
+
+    # Allow JNLP traffic from Jenkins agents
+    - from:
+        - podSelector:
+            matchLabels:
+              jenkins/label: agent
+      ports:
+        - protocol: TCP
+          port: 50000
+
+    # Allow health checks from kubelet
+    - from:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 8080
+
+  egress:
+    # DNS resolution (kube-dns)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
+    # HTTPS to external services (plugins, updates, git)
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80
+
+    # Communication with Jenkins agents
+    - to:
+        - podSelector:
+            matchLabels:
+              jenkins/label: agent
+      ports:
+        - protocol: TCP
+          port: 50000
+
+    # Communication with Kubernetes API (for dynamic agents)
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 6443

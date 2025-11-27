@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: jenkins-quota
+  namespace: jenkins
+  labels:
+    app: jenkins
+spec:
+  hard:
+    # CPU limits
+    requests.cpu: "8"
+    limits.cpu: "16"
+
+    # Memory limits
+    requests.memory: 16Gi
+    limits.memory: 32Gi
+
+    # Storage
+    persistentvolumeclaims: "10"
+    requests.storage: 100Gi
+
+    # Object counts
+    pods: "50"
+    services: "10"
+    secrets: "50"
+    configmaps: "50"
+    replicationcontrollers: "20"
+
+    # Prevent LoadBalancer abuse
+    services.loadbalancers: "2"
+    services.nodeports: "5"

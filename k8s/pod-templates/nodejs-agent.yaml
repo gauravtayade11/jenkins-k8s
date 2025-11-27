@@ -1,0 +1,87 @@
+# ============================================
+# Node.js Build Agent Pod Template
+# ============================================
+# This template is used for Node.js/JavaScript builds
+# ============================================
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    jenkins/label: agent
+    agent-type: nodejs
+spec:
+  serviceAccountName: jenkins
+
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+
+  containers:
+    # JNLP container
+    - name: jnlp
+      image: jenkins/inbound-agent:latest-jdk17
+      imagePullPolicy: IfNotPresent
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "256Mi"
+        limits:
+          cpu: "500m"
+          memory: "512Mi"
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+            - ALL
+      env:
+        - name: JENKINS_WEB_SOCKET
+          value: "true"
+
+    # Node.js container
+    - name: nodejs
+      image: node:20-alpine
+      imagePullPolicy: IfNotPresent
+      command:
+        - sleep
+      args:
+        - "infinity"
+      workingDir: /home/jenkins/agent
+      resources:
+        requests:
+          cpu: "500m"
+          memory: "512Mi"
+        limits:
+          cpu: "2000m"
+          memory: "2Gi"
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+            - ALL
+      env:
+        - name: NODE_ENV
+          value: "development"
+        - name: NPM_CONFIG_CACHE
+          value: "/home/jenkins/.npm"
+      volumeMounts:
+        - name: npm-cache
+          mountPath: /home/jenkins/.npm
+        - name: workspace
+          mountPath: /home/jenkins/agent
+
+  volumes:
+    - name: npm-cache
+      emptyDir:
+        sizeLimit: 2Gi
+    - name: workspace
+      emptyDir: {}
+
+  restartPolicy: Never

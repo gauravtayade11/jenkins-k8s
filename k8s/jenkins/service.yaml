@@ -1,0 +1,84 @@
+# ============================================
+# Jenkins Web UI Service
+# ============================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: jenkins
+  namespace: jenkins
+  labels:
+    app: jenkins
+    component: controller
+  annotations:
+    description: "Jenkins web interface service"
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      protocol: TCP
+    - name: jnlp
+      port: 50000
+      targetPort: jnlp
+      protocol: TCP
+  selector:
+    app: jenkins
+    component: controller
+---
+# ============================================
+# Jenkins Agent Service (Headless)
+# ============================================
+# Headless service for direct pod communication
+# Used by Jenkins agents to connect to controller
+apiVersion: v1
+kind: Service
+metadata:
+  name: jenkins-agent
+  namespace: jenkins
+  labels:
+    app: jenkins
+    component: agent-listener
+  annotations:
+    description: "Headless service for Jenkins agent communication"
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - name: jnlp
+      port: 50000
+      targetPort: jnlp
+      protocol: TCP
+  selector:
+    app: jenkins
+    component: controller
+---
+# ============================================
+# Jenkins LoadBalancer Service (Optional)
+# ============================================
+# Uncomment if you want direct LoadBalancer access
+# Note: This exposes Jenkins directly - use Ingress for production
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: jenkins-lb
+#   namespace: jenkins
+#   labels:
+#     app: jenkins
+#     component: controller
+#   annotations:
+#     # AWS specific
+#     # service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+#     # service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+#     # GCP specific
+#     # cloud.google.com/load-balancer-type: "Internal"
+# spec:
+#   type: LoadBalancer
+#   ports:
+#     - name: http
+#       port: 80
+#       targetPort: http
+#       protocol: TCP
+#   selector:
+#     app: jenkins
+#     component: controller

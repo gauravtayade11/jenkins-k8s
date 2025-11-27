@@ -1,0 +1,80 @@
+# ============================================
+# Jenkins Ingress Configuration
+# ============================================
+# This assumes you have an Ingress Controller installed
+# (nginx-ingress, traefik, etc.)
+# ============================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: jenkins-ingress
+  namespace: jenkins
+  labels:
+    app: jenkins
+  annotations:
+    # Nginx Ingress Controller annotations
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+
+    # Enable WebSocket support for live console output
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+    nginx.ingress.kubernetes.io/upstream-hash-by: "$remote_addr"
+
+    # Security headers
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      add_header X-Frame-Options "SAMEORIGIN" always;
+      add_header X-Content-Type-Options "nosniff" always;
+      add_header X-XSS-Protection "1; mode=block" always;
+      add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    # cert-manager for automatic TLS (uncomment if using cert-manager)
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+
+    # AWS ALB Controller (uncomment if using ALB)
+    # kubernetes.io/ingress.class: alb
+    # alb.ingress.kubernetes.io/scheme: internet-facing
+    # alb.ingress.kubernetes.io/target-type: ip
+    # alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:region:account:certificate/xxx
+
+    # GKE specific (uncomment if using GKE)
+    # kubernetes.io/ingress.class: "gce"
+    # kubernetes.io/ingress.global-static-ip-name: "jenkins-ip"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - jenkins.example.com
+      secretName: jenkins-tls
+  rules:
+    - host: jenkins.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: jenkins
+                port:
+                  number: 8080
+---
+# ============================================
+# TLS Secret (if not using cert-manager)
+# ============================================
+# Create this secret with your TLS certificate
+# kubectl create secret tls jenkins-tls \
+#   --cert=path/to/tls.crt \
+#   --key=path/to/tls.key \
+#   -n jenkins
+# ============================================
+# apiVersion: v1
+# kind: Secret
+# metadata:
+#   name: jenkins-tls
+#   namespace: jenkins
+# type: kubernetes.io/tls
+# data:
+#   tls.crt: <base64-encoded-cert>
+#   tls.key: <base64-encoded-key>

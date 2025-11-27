@@ -1,0 +1,69 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: jenkins-role
+  namespace: jenkins
+  labels:
+    app: jenkins
+rules:
+  # ===========================================
+  # Pod Management - Required for dynamic agents
+  # ===========================================
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["create", "delete", "get", "list", "watch", "patch"]
+
+  # Pod logs - Required to capture build output
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get", "list", "watch"]
+
+  # Pod exec - Required to run commands in agent containers
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create", "get"]
+
+  # ===========================================
+  # Configuration Management
+  # ===========================================
+  # ConfigMaps - For Jenkins configuration as code
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["create", "delete", "get", "list", "watch", "update"]
+
+  # Secrets - For credentials management
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create", "delete", "get", "list", "watch", "update"]
+
+  # ===========================================
+  # Storage Management
+  # ===========================================
+  # PVCs - For workspace persistence (optional)
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["create", "delete", "get", "list", "watch"]
+
+  # ===========================================
+  # Monitoring and Debugging
+  # ===========================================
+  # Events - For monitoring and troubleshooting
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["get", "list", "watch"]
+
+  # ===========================================
+  # Optional: Deployment capabilities
+  # Uncomment if Jenkins deploys to this namespace
+  # ===========================================
+  # - apiGroups: ["apps"]
+  #   resources: ["deployments", "replicasets", "statefulsets"]
+  #   verbs: ["create", "delete", "get", "list", "watch", "update", "patch"]
+
+  # - apiGroups: [""]
+  #   resources: ["services"]
+  #   verbs: ["create", "delete", "get", "list", "watch", "update"]
+
+  # - apiGroups: ["networking.k8s.io"]
+  #   resources: ["ingresses"]
+  #   verbs: ["create", "delete", "get", "list", "watch", "update"]

@@ -1,0 +1,170 @@
+# ============================================
+# Multi-Tool Build Agent Pod Template
+# ============================================
+# This template includes multiple tools for
+# complete CI/CD pipelines:
+# - Maven for Java builds
+# - Node.js for frontend
+# - kubectl for deployments
+# - Kaniko for Docker builds
+# ============================================
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    jenkins/label: agent
+    agent-type: multi-tool
+spec:
+  serviceAccountName: jenkins
+
+  securityContext:
+    fsGroup: 1000
+
+  containers:
+    # JNLP container - Jenkins agent communication
+    - name: jnlp
+      image: jenkins/inbound-agent:latest-jdk17
+      imagePullPolicy: IfNotPresent
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "256Mi"
+        limits:
+          cpu: "500m"
+          memory: "512Mi"
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+            - ALL
+      env:
+        - name: JENKINS_WEB_SOCKET
+          value: "true"
+
+    # Maven container - Java builds
+    - name: maven
+      image: maven:3.9-eclipse-temurin-17
+      imagePullPolicy: IfNotPresent
+      command: ["sleep", "infinity"]
+      workingDir: /home/jenkins/agent
+      resources:
+        requests:
+          cpu: "200m"
+          memory: "512Mi"
+        limits:
+          cpu: "1000m"
+          memory: "2Gi"
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+            - ALL
+      env:
+        - name: MAVEN_OPTS
+          value: "-Xmx1g -Xms256m"
+        - name: MAVEN_CONFIG
+          value: "/home/jenkins/.m2"
+      volumeMounts:
+        - name: maven-cache
+          mountPath: /home/jenkins/.m2/repository
+        - name: workspace
+          mountPath: /home/jenkins/agent
+
+    # Node.js container - Frontend builds
+    - name: nodejs
+      image: node:20-alpine
+      imagePullPolicy: IfNotPresent
+      command: ["sleep", "infinity"]
+      workingDir: /home/jenkins/agent
+      resources:
+        requests:
+          cpu: "200m"
+          memory: "256Mi"
+        limits:
+          cpu: "1000m"
+          memory: "1Gi"
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+            - ALL
+      env:
+        - name: NPM_CONFIG_CACHE
+          value: "/home/jenkins/.npm"
+      volumeMounts:
+        - name: npm-cache
+          mountPath: /home/jenkins/.npm
+        - name: workspace
+          mountPath: /home/jenkins/agent
+
+    # kubectl container - Kubernetes deployments
+    - name: kubectl
+      image: bitnami/kubectl:latest
+      imagePullPolicy: IfNotPresent
+      command: ["sleep", "infinity"]
+      workingDir: /home/jenkins/agent
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "128Mi"
+        limits:
+          cpu: "500m"
+          memory: "512Mi"
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+            - ALL
+      volumeMounts:
+        - name: workspace
+          mountPath: /home/jenkins/agent
+
+    # Kaniko container - Docker image builds
+    - name: kaniko
+      image: gcr.io/kaniko-project/executor:debug
+      imagePullPolicy: IfNotPresent
+      command: ["/busybox/sleep", "infinity"]
+      workingDir: /workspace
+      resources:
+        requests:
+          cpu: "200m"
+          memory: "512Mi"
+        limits:
+          cpu: "1000m"
+          memory: "2Gi"
+      volumeMounts:
+        - name: docker-config
+          mountPath: /kaniko/.docker
+          readOnly: true
+        - name: workspace
+          mountPath: /workspace
+
+  volumes:
+    - name: maven-cache
+      emptyDir:
+        sizeLimit: 5Gi
+    - name: npm-cache
+      emptyDir:
+        sizeLimit: 2Gi
+    - name: workspace
+      emptyDir: {}
+    - name: docker-config
+      secret:
+        secretName: docker-registry-credentials
+        optional: true
+        items:
+          - key: .dockerconfigjson
+            path: config.json
+
+  restartPolicy: Never
+
+  # Terminate quickly if pod is evicted
+  terminationGracePeriodSeconds: 30

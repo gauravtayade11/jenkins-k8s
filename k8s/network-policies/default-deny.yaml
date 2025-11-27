@@ -1,0 +1,23 @@
+# ============================================
+# Default Deny All Network Policy
+# ============================================
+# This implements a zero-trust network model
+# All traffic is denied by default, requiring explicit allow rules
+# ============================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: jenkins
+  labels:
+    app: jenkins
+    policy: default-deny
+  annotations:
+    description: "Deny all ingress and egress traffic by default"
+spec:
+  # Apply to all pods in namespace
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  # Empty ingress/egress = deny all

@@ -1,0 +1,106 @@
+# ============================================
+# Maven Build Agent Pod Template
+# ============================================
+# This template is used for Java/Maven builds
+# Includes dependency caching for faster builds
+# ============================================
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    jenkins/label: agent
+    agent-type: maven
+spec:
+  serviceAccountName: jenkins
+
+  # Pod Security Context
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+
+  containers:
+    # JNLP container - required for Jenkins agent communication
+    - name: jnlp
+      image: jenkins/inbound-agent:latest-jdk17
+      imagePullPolicy: IfNotPresent
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "256Mi"
+        limits:
+          cpu: "500m"
+          memory: "512Mi"
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: false
+        capabilities:
+          drop:
+            - ALL
+      env:
+        - name: JENKINS_WEB_SOCKET
+          value: "true"
+
+    # Maven container - for building Java applications
+    - name: maven
+      image: maven:3.9-eclipse-temurin-17
+      imagePullPolicy: IfNotPresent
+      command:
+        - sleep
+      args:
+        - "infinity"
+      workingDir: /home/jenkins/agent
+      resources:
+        requests:
+          cpu: "500m"
+          memory: "1Gi"
+        limits:
+          cpu: "2000m"
+          memory: "4Gi"
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: false
+        capabilities:
+          drop:
+            - ALL
+      env:
+        - name: MAVEN_OPTS
+          value: "-Xmx2g -Xms512m -XX:+UseG1GC"
+        - name: MAVEN_CONFIG
+          value: "/home/jenkins/.m2"
+      volumeMounts:
+        - name: maven-cache
+          mountPath: /home/jenkins/.m2/repository
+        - name: workspace
+          mountPath: /home/jenkins/agent
+
+  volumes:
+    # Maven repository cache - use emptyDir for simplicity
+    # For persistent caching, use a PVC with ReadWriteMany access mode
+    - name: maven-cache
+      emptyDir:
+        sizeLimit: 5Gi
+    # Workspace volume
+    - name: workspace
+      emptyDir: {}
+
+  # Restart policy
+  restartPolicy: Never
+
+  # Node selection (optional - uncomment if using dedicated build nodes)
+  # nodeSelector:
+  #   node-role.kubernetes.io/build: "true"
+
+  # Tolerations (optional)
+  # tolerations:
+  #   - key: "dedicated"
+  #     operator: "Equal"
+  #     value: "build"
+  #     effect: "NoSchedule"

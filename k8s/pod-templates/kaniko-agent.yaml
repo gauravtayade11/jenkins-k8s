@@ -1,0 +1,87 @@
+# ============================================
+# Kaniko Build Agent Pod Template
+# ============================================
+# This template is used for building Docker images
+# without requiring Docker daemon (rootless)
+# ============================================
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    jenkins/label: agent
+    agent-type: kaniko
+spec:
+  serviceAccountName: jenkins
+
+  securityContext:
+    runAsUser: 0  # Kaniko requires root
+    fsGroup: 0
+
+  containers:
+    # JNLP container
+    - name: jnlp
+      image: jenkins/inbound-agent:latest-jdk17
+      imagePullPolicy: IfNotPresent
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "256Mi"
+        limits:
+          cpu: "500m"
+          memory: "512Mi"
+      securityContext:
+        runAsUser: 0
+        allowPrivilegeEscalation: false
+      env:
+        - name: JENKINS_WEB_SOCKET
+          value: "true"
+
+    # Kaniko container for building Docker images
+    - name: kaniko
+      image: gcr.io/kaniko-project/executor:debug
+      imagePullPolicy: IfNotPresent
+      command:
+        - /busybox/sleep
+      args:
+        - "infinity"
+      workingDir: /workspace
+      resources:
+        requests:
+          cpu: "500m"
+          memory: "1Gi"
+        limits:
+          cpu: "2000m"
+          memory: "4Gi"
+      volumeMounts:
+        - name: docker-config
+          mountPath: /kaniko/.docker
+          readOnly: true
+        - name: workspace
+          mountPath: /workspace
+
+  volumes:
+    # Docker config for registry authentication
+    # Create with: kubectl create secret docker-registry docker-registry-credentials ...
+    - name: docker-config
+      secret:
+        secretName: docker-registry-credentials
+        optional: true
+        items:
+          - key: .dockerconfigjson
+            path: config.json
+    - name: workspace
+      emptyDir: {}
+
+  restartPolicy: Never
+---
+# ============================================
+# Docker Registry Credentials Secret Template
+# ============================================
+# Create this secret for pushing to private registries
+# kubectl create secret docker-registry docker-registry-credentials \
+#   --docker-server=<registry-url> \
+#   --docker-username=<username> \
+#   --docker-password=<password> \
+#   --docker-email=<email> \
+#   -n jenkins
+# ============================================

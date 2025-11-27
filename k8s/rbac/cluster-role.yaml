@@ -1,0 +1,68 @@
+# ============================================
+# OPTIONAL: ClusterRole for multi-namespace access
+# Only apply if Jenkins needs to deploy across namespaces
+# ============================================
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: jenkins-cluster-role
+  labels:
+    app: jenkins
+rules:
+  # Read namespaces - useful for namespace selection in pipelines
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list", "watch"]
+
+  # Read nodes - useful for node affinity decisions
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "watch"]
+
+  # Deployment management across namespaces
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets", "statefulsets", "daemonsets"]
+    verbs: ["create", "delete", "get", "list", "watch", "update", "patch"]
+
+  # Service management
+  - apiGroups: [""]
+    resources: ["services", "endpoints"]
+    verbs: ["create", "delete", "get", "list", "watch", "update"]
+
+  # ConfigMaps and Secrets across namespaces
+  - apiGroups: [""]
+    resources: ["configmaps", "secrets"]
+    verbs: ["create", "delete", "get", "list", "watch", "update"]
+
+  # Pod management across namespaces
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "pods/exec"]
+    verbs: ["create", "delete", "get", "list", "watch"]
+
+  # Ingress management
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses"]
+    verbs: ["create", "delete", "get", "list", "watch", "update"]
+
+  # HPA for auto-scaling
+  - apiGroups: ["autoscaling"]
+    resources: ["horizontalpodautoscalers"]
+    verbs: ["create", "delete", "get", "list", "watch", "update"]
+---
+# ============================================
+# ClusterRoleBinding - binds ClusterRole to ServiceAccount
+# ============================================
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: jenkins-cluster-role-binding
+  labels:
+    app: jenkins
+subjects:
+  - kind: ServiceAccount
+    name: jenkins
+    namespace: jenkins
+roleRef:
+  kind: ClusterRole
+  name: jenkins-cluster-role
+  apiGroup: rbac.authorization.k8s.io

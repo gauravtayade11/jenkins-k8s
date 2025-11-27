@@ -1,0 +1,223 @@
+# ============================================
+# Jenkins Helm Chart Values
+# ============================================
+# Install: helm install jenkins jenkins/jenkins -n jenkins -f helm-values.yaml
+# ============================================
+
+controller:
+  # Image configuration
+  image:
+    registry: "docker.io"
+    repository: "jenkins/jenkins"
+    tag: "lts-jdk17"
+    pullPolicy: IfNotPresent
+
+  # Component name
+  componentName: controller
+
+  # Admin credentials
+  admin:
+    existingSecret: jenkins-admin-secret
+    userKey: jenkins-admin-user
+    passwordKey: jenkins-admin-password
+
+  # Resource allocation
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "2000m"
+      memory: "4Gi"
+
+  # Java options
+  javaOpts: >-
+    -Xmx2g
+    -Xms512m
+    -XX:+UseG1GC
+    -XX:+UseStringDeduplication
+    -Djenkins.install.runSetupWizard=false
+    -Dhudson.security.csrf.GlobalCrumbIssuerConfiguration.DISABLE_CSRF_PROTECTION=false
+
+  # Jenkins options
+  jenkinsOpts: "--httpPort=8080"
+
+  # Service Account
+  serviceAccount:
+    create: false
+    name: jenkins
+    annotations: {}
+
+  # Pod Security Context
+  podSecurityContextOverride:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+
+  # Container Security Context
+  containerSecurityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    runAsNonRoot: true
+    readOnlyRootFilesystem: false
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+
+  # Pod labels (important for network policies)
+  podLabels:
+    app: jenkins
+    component: controller
+
+  # Service configuration
+  serviceType: ClusterIP
+  servicePort: 8080
+  targetPort: 8080
+
+  # Agent listener
+  agentListenerEnabled: true
+  agentListenerPort: 50000
+  agentListenerServiceType: ClusterIP
+
+  # Health probes
+  healthProbes: true
+  probes:
+    startupProbe:
+      httpGet:
+        path: '/login'
+        port: http
+      initialDelaySeconds: 60
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 30
+    livenessProbe:
+      httpGet:
+        path: '/login'
+        port: http
+      initialDelaySeconds: 60
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 5
+    readinessProbe:
+      httpGet:
+        path: '/login'
+        port: http
+      initialDelaySeconds: 60
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+
+  # Plugins to install
+  installPlugins:
+    - kubernetes:latest
+    - workflow-aggregator:latest
+    - git:latest
+    - github:latest
+    - configuration-as-code:latest
+    - job-dsl:latest
+    - credentials-binding:latest
+    - pipeline-stage-view:latest
+    - blueocean:latest
+    - prometheus:latest
+    - kubernetes-credentials-provider:latest
+    - pipeline-utility-steps:latest
+    - timestamper:latest
+    - ws-cleanup:latest
+    - antisamy-markup-formatter:latest
+
+  # Initialize only on first run
+  initializeOnce: true
+
+  # JCasC Configuration
+  JCasC:
+    defaultConfig: true
+    configScripts:
+      welcome-message: |
+        jenkins:
+          systemMessage: "Jenkins on Kubernetes - Production Ready"
+
+      security-config: |
+        security:
+          globalJobDslSecurityConfiguration:
+            useScriptSecurity: true
+          sSHD:
+            port: -1
+          apiToken:
+            creationOfLegacyTokenEnabled: false
+            tokenGenerationOnCreationEnabled: false
+            usageStatisticsEnabled: true
+
+      jenkins-config: |
+        jenkins:
+          numExecutors: 0
+          mode: EXCLUSIVE
+          slaveAgentPort: 50000
+          agentProtocols:
+            - "JNLP4-connect"
+
+      cloud-config: |
+        jenkins:
+          clouds:
+            - kubernetes:
+                name: "kubernetes"
+                serverUrl: "https://kubernetes.default.svc"
+                skipTlsVerify: false
+                namespace: "jenkins"
+                jenkinsUrl: "http://jenkins.jenkins.svc.cluster.local:8080"
+                jenkinsTunnel: "jenkins-agent.jenkins.svc.cluster.local:50000"
+                containerCapStr: "50"
+                maxRequestsPerHostStr: "32"
+                retentionTimeout: 5
+                connectTimeout: 10
+                readTimeout: 20
+                podRetention: onFailure
+                podLabels:
+                  - key: "jenkins/label"
+                    value: "agent"
+
+# Persistence configuration
+persistence:
+  enabled: true
+  existingClaim: ""
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: "20Gi"
+  annotations: {}
+
+# Agent configuration
+agent:
+  enabled: true
+  image:
+    repository: "jenkins/inbound-agent"
+    tag: "latest-jdk17"
+  resources:
+    requests:
+      cpu: "200m"
+      memory: "256Mi"
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+  podLabels:
+    jenkins/label: agent
+
+# Backup configuration (optional)
+backup:
+  enabled: false
+
+# Prometheus metrics
+prometheus:
+  enabled: true
+  serviceMonitorEnabled: false
+
+# Network Policy (we manage this separately)
+networkPolicy:
+  enabled: false
+
+# RBAC (we manage this separately)
+rbac:
+  create: false
+  readSecrets: true

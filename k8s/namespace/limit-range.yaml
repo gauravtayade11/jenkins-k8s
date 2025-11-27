@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: jenkins-limits
+  namespace: jenkins
+  labels:
+    app: jenkins
+spec:
+  limits:
+    # Container limits
+    - type: Container
+      # Default limits (applied if not specified)
+      default:
+        cpu: "500m"
+        memory: "512Mi"
+      # Default requests (applied if not specified)
+      defaultRequest:
+        cpu: "100m"
+        memory: "128Mi"
+      # Maximum allowed
+      max:
+        cpu: "4"
+        memory: "8Gi"
+      # Minimum required
+      min:
+        cpu: "50m"
+        memory: "64Mi"
+      # Max ratio between limit and request
+      maxLimitRequestRatio:
+        cpu: "10"
+        memory: "4"
+
+    # Pod limits (sum of all containers)
+    - type: Pod
+      max:
+        cpu: "8"
+        memory: "16Gi"
+      min:
+        cpu: "50m"
+        memory: "64Mi"
+
+    # PVC limits
+    - type: PersistentVolumeClaim
+      max:
+        storage: 50Gi
+      min:
+        storage: 1Gi

@@ -1,0 +1,35 @@
+# ============================================
+# Allow DNS for all pods in jenkins namespace
+# ============================================
+# This is a more permissive DNS policy that can be used
+# instead of defining DNS rules in each policy
+# ============================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-access
+  namespace: jenkins
+  labels:
+    app: jenkins
+    policy: dns
+  annotations:
+    description: "Allow DNS resolution for all pods"
+spec:
+  podSelector: {}  # Apply to all pods
+  policyTypes:
+    - Egress
+  egress:
+    # Allow DNS to kube-dns in kube-system
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
