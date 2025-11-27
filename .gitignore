@@ -77,3 +77,6 @@ coverage/
 # Temporary files
 tmp/
 temp/
+
+# Articles (local only - not pushed to GitHub)
+articles/
