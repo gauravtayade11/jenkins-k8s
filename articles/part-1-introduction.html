@@ -1,0 +1,259 @@
+<h1>Jenkins on Kubernetes: The Ultimate Guide to Scalable CI/CD (Part 1)</h1>
+
+<p><em>Build a production-ready, secure, and auto-scaling CI/CD platform that saves you money and headaches</em></p>
+
+<hr>
+
+<p>If you've ever managed Jenkins in production, you know the pain. Static build agents sitting idle, consuming resources. Sudden spikes in builds causing queues. The dreaded "works on my machine" syndrome. And let's not even talk about the security nightmares.</p>
+
+<p>What if I told you there's a better way?</p>
+
+<p>In this 6-part series, I'll show you how to deploy Jenkins on Kubernetes with <strong>dynamic pod agents</strong> that spin up on-demand and disappear when done. No wasted resources. No queue bottlenecks. And security that would make your compliance team smile.</p>
+
+<p>By the end, you'll have a complete, production-ready CI/CD platform — and a Spring Boot application to prove it works.</p>
+
+<p>Let's dive in.</p>
+
+<hr>
+
+<h2>Why Should You Care?</h2>
+
+<p>Here's the reality of traditional Jenkins setups:</p>
+
+<table>
+<tr><th>Traditional Jenkins</th><th>Jenkins on Kubernetes</th></tr>
+<tr><td>Static agents running 24/7</td><td>Agents spin up only when needed</td></tr>
+<tr><td>Pay for idle resources</td><td>Pay only for actual build time</td></tr>
+<tr><td>Manual scaling</td><td>Auto-scaling based on demand</td></tr>
+<tr><td>Inconsistent build environments</td><td>Fresh, identical containers every time</td></tr>
+<tr><td>Complex maintenance</td><td>Kubernetes handles infrastructure</td></tr>
+</table>
+
+<p><strong>The bottom line?</strong> Companies running Jenkins on Kubernetes report <strong>40-60% cost savings</strong> on build infrastructure and <strong>near-zero queue times</strong> during peak hours.</p>
+
+<hr>
+
+<h2>What We're Building</h2>
+
+<p>Over this series, we'll create a complete CI/CD platform:</p>
+
+<pre><code>┌─────────────────────────────────────────────────────────────────┐
+│                    Kubernetes Cluster                           │
+│  ┌───────────────────────────────────────────────────────────┐ │
+│  │                  jenkins namespace                         │ │
+│  │                                                            │ │
+│  │  ┌──────────────┐      ┌────────────────────────────────┐ │ │
+│  │  │   Jenkins    │      │      Dynamic Pod Agents        │ │ │
+│  │  │  Controller  │◄────►│  ┌──────┐ ┌──────┐ ┌────────┐ │ │ │
+│  │  │              │      │  │Maven │ │Node  │ │ Kaniko │ │ │ │
+│  │  └──────────────┘      │  │ Pod  │ │ Pod  │ │  Pod   │ │ │ │
+│  │                        │  └──────┘ └──────┘ └────────┘ │ │ │
+│  │                        │     ↑ Created on demand        │ │ │
+│  │                        │     ↓ Destroyed after build    │ │ │
+│  │                        └────────────────────────────────┘ │ │
+│  │                                                            │ │
+│  │  🔒 Security: RBAC | Network Policies | Pod Security      │ │
+│  └───────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘</code></pre>
+
+<p><strong>Key Features:</strong></p>
+<ul>
+<li><strong>Zero idle resources</strong> — Agents exist only during builds</li>
+<li><strong>Enterprise security</strong> — RBAC, network isolation, non-root containers</li>
+<li><strong>Multi-tool builds</strong> — Maven, Node.js, Docker (Kaniko) in one pipeline</li>
+<li><strong>Real-world example</strong> — Complete Spring Boot CI/CD pipeline</li>
+</ul>
+
+<hr>
+
+<h2>The Series Roadmap</h2>
+
+<p>Here's what each part covers:</p>
+
+<h3>Part 1: Introduction & Architecture (You're Here)</h3>
+<p>Setting the stage — why this matters and what we're building.</p>
+
+<h3>Part 2: Kubernetes Foundation</h3>
+<p>We'll create a rock-solid foundation:</p>
+<ul>
+<li>Dedicated namespace with resource quotas</li>
+<li>RBAC with principle of least privilege</li>
+<li>Network policies for zero-trust security</li>
+</ul>
+
+<h3>Part 3: Jenkins Deployment</h3>
+<p>Deploy Jenkins the right way:</p>
+<ul>
+<li>Helm chart vs raw manifests (we'll cover both)</li>
+<li>Persistent storage configuration</li>
+<li>Security hardening</li>
+</ul>
+
+<h3>Part 4: Dynamic Pod Agents</h3>
+<p>The magic happens here:</p>
+<ul>
+<li>Pod templates for different build types</li>
+<li>Multi-container pods</li>
+<li>Caching strategies for faster builds</li>
+</ul>
+
+<h3>Part 5: Spring Boot Sample Project</h3>
+<p>A real application to test our pipeline:</p>
+<ul>
+<li>REST API with tests</li>
+<li>Multi-stage Dockerfile</li>
+<li>Kubernetes deployment manifests</li>
+</ul>
+
+<h3>Part 6: Complete Pipeline & Best Practices</h3>
+<p>Putting it all together:</p>
+<ul>
+<li>Production-ready Jenkinsfile</li>
+<li>Parallel stages</li>
+<li>Deployment strategies</li>
+<li>Troubleshooting guide</li>
+</ul>
+
+<hr>
+
+<h2>Security: Not an Afterthought</h2>
+
+<p>Security isn't something we bolt on at the end. It's woven into every layer:</p>
+
+<h3>1. Namespace Isolation</h3>
+<p>Jenkins lives in its own namespace with strict resource quotas. No noisy neighbors, no resource exhaustion.</p>
+
+<h3>2. RBAC (Role-Based Access Control)</h3>
+<p>Jenkins gets only the permissions it needs — nothing more. We follow the principle of least privilege religiously.</p>
+
+<h3>3. Network Policies</h3>
+<p>Zero-trust networking. Every connection must be explicitly allowed. If an agent is compromised, it can't reach anything it shouldn't.</p>
+
+<h3>4. Pod Security Standards</h3>
+<ul>
+<li>Containers run as non-root</li>
+<li>No privilege escalation</li>
+<li>Capabilities dropped</li>
+<li>Read-only filesystems where possible</li>
+</ul>
+
+<h3>5. Secrets Management</h3>
+<p>Credentials stored in Kubernetes secrets, not in Jenkins. Ready for integration with Vault or external secret stores.</p>
+
+<hr>
+
+<h2>Prerequisites</h2>
+
+<p>Before we start, make sure you have:</p>
+
+<ul>
+<li><strong>Kubernetes cluster</strong> (v1.25+) — minikube, kind, EKS, GKE, or AKS all work</li>
+<li><strong>kubectl</strong> configured and connected</li>
+<li><strong>Helm 3.x</strong> installed (optional but recommended)</li>
+<li><strong>Basic knowledge</strong> of Kubernetes concepts (pods, deployments, services)</li>
+<li><strong>Basic knowledge</strong> of Jenkins (jobs, pipelines)</li>
+</ul>
+
+<p>Don't worry if you're not an expert. I'll explain everything as we go.</p>
+
+<hr>
+
+<h2>Project Structure</h2>
+
+<p>Here's what we're building:</p>
+
+<pre><code>jenkins-k8s/
+├── articles/              # Medium blog articles (you're reading one!)
+├── docs/                  # Technical reference documentation
+├── k8s/                   # Kubernetes manifests
+│   ├── namespace/         # Namespace, quotas, limits
+│   ├── rbac/              # Service accounts, roles
+│   ├── network-policies/  # Network security
+│   ├── jenkins/           # Jenkins deployment
+│   └── pod-templates/     # Agent configurations
+├── spring-boot-app/       # Sample application
+├── scripts/               # Setup & utility scripts
+└── Jenkinsfile            # Pipeline definition</code></pre>
+
+<p>All code is available on GitHub. Clone it and follow along:</p>
+
+<pre><code>git clone https://github.com/yourusername/jenkins-k8s.git
+cd jenkins-k8s</code></pre>
+
+<hr>
+
+<h2>Quick Peek: The End Result</h2>
+
+<p>Here's a taste of what your Jenkinsfile will look like:</p>
+
+<pre><code>pipeline {
+    agent {
+        kubernetes {
+            yaml '''
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+    - name: maven
+      image: maven:3.9-eclipse-temurin-17
+      command: ["sleep", "infinity"]
+    - name: kaniko
+      image: gcr.io/kaniko-project/executor:debug
+      command: ["/busybox/sleep", "infinity"]
+'''
+        }
+    }
+    stages {
+        stage('Build') {
+            steps {
+                container('maven') {
+                    sh 'mvn clean package'
+                }
+            }
+        }
+        stage('Docker Build') {
+            steps {
+                container('kaniko') {
+                    sh '/kaniko/executor --destination=myapp:latest'
+                }
+            }
+        }
+    }
+}</code></pre>
+
+<p><strong>Notice something?</strong> The pipeline defines its own agent pod inline. Maven for building Java, Kaniko for Docker images — all in one pipeline, all on-demand.</p>
+
+<hr>
+
+<h2>What's Next?</h2>
+
+<p>In <strong>Part 2</strong>, we'll get our hands dirty with Kubernetes:</p>
+
+<ul>
+<li>Create a secure namespace with Pod Security Standards</li>
+<li>Set up RBAC with minimal permissions</li>
+<li>Implement network policies for zero-trust security</li>
+<li>Configure resource quotas to prevent runaway builds</li>
+</ul>
+
+<p>The foundation we build there will make everything else possible.</p>
+
+<hr>
+
+<h2>Let's Connect</h2>
+
+<p>Have questions? Running into issues? Want to share your own Jenkins war stories?</p>
+
+<ul>
+<li>Drop a comment below</li>
+<li>Find me on LinkedIn/Twitter</li>
+<li>Star the repo on GitHub</li>
+</ul>
+
+<hr>
+
+<p><strong>Next up:</strong> Part 2: Kubernetes Setup & Namespace Security →</p>
+
+<hr>
+
+<p><em>This is Part 1 of a 6-part series on deploying Jenkins on Kubernetes with security best practices. Follow me to get notified when new parts are published!</em></p>
